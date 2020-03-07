@@ -69,7 +69,7 @@ public class NPCModifier {
     public void send(@NotNull Player... targetPlayers) {
         for (Player targetPlayer : ImmutableList.copyOf(targetPlayers)) {
             try {
-                for (PacketContainer packetContainer : this.packetContainers) {
+                for (PacketContainer packetContainer : new ArrayList<>(this.packetContainers)) {
                     ProtocolLibrary.getProtocolManager().sendServerPacket(targetPlayer, packetContainer);
                 }
             } catch (InvocationTargetException exception) {
