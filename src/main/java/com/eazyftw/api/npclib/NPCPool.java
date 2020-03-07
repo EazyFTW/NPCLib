@@ -9,20 +9,22 @@ import com.comphenix.protocol.wrappers.EnumWrappers;
 import com.eazyftw.api.npclib.event.PlayerNPCInteractEvent;
 import com.eazyftw.api.npclib.modifier.AnimationModifier;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableList;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
 import org.bukkit.event.player.PlayerInteractEvent;
+import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.event.player.PlayerToggleSneakEvent;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class NPCPool implements Listener {
 
@@ -32,7 +34,7 @@ public class NPCPool implements Listener {
 
     private int actionDistance;
 
-    private Map<Integer, NPC> npcMap = new HashMap<>();
+    private Map<Integer, NPC> npcMap = new ConcurrentHashMap<>();
 
 
     /**
@@ -89,8 +91,8 @@ public class NPCPool implements Listener {
     }
 
     private void npcTick() {
-        Bukkit.getScheduler().scheduleSyncRepeatingTask(this.javaPlugin, () -> {
-            for (Player player : Bukkit.getOnlinePlayers()) {
+        Bukkit.getScheduler().runTaskTimerAsynchronously(this.javaPlugin, () -> {
+            for (Player player : ImmutableList.copyOf(Bukkit.getOnlinePlayers())) {
 
                 for (NPC npc : this.npcMap.values()) {
                     double distance = npc.getLocation().distance(player.getLocation());
@@ -107,7 +109,7 @@ public class NPCPool implements Listener {
                 }
 
             }
-        }, 20, 3);
+        }, 20, 2);
     }
 
     protected void takeCareOf(@NotNull NPC npc) {
@@ -129,11 +131,20 @@ public class NPCPool implements Listener {
     }
 
     @EventHandler
+    public void handleQuit(PlayerQuitEvent event) {
+        Player player = event.getPlayer();
+
+        this.npcMap.values().stream()
+                .filter(npc -> npc.isShownFor(player))
+                .forEach(npc -> npc.removeSeeingPlayer(player));
+    }
+
+    @EventHandler
     public void handleSneak(PlayerToggleSneakEvent event) {
         Player player = event.getPlayer();
 
         this.npcMap.values().stream()
-                .filter(npc -> npc.isImitatePlayer() && npc.getLocation().distance(player.getLocation()) <= this.actionDistance)
+                .filter(npc -> npc.isImitatePlayer() && npc.isShownFor(player) && npc.getLocation().distance(player.getLocation()) <= this.actionDistance)
                 .forEach(npc -> npc.metadata().queueSneaking(event.isSneaking()).send(player));
     }
 
@@ -143,7 +154,7 @@ public class NPCPool implements Listener {
 
         if (event.getAction() == Action.LEFT_CLICK_AIR || event.getAction() == Action.LEFT_CLICK_BLOCK) {
             this.npcMap.values().stream()
-                    .filter(npc -> npc.isImitatePlayer() && npc.getLocation().distance(player.getLocation()) <= this.actionDistance)
+                    .filter(npc -> npc.isImitatePlayer() && npc.isShownFor(player) && npc.getLocation().distance(player.getLocation()) <= this.actionDistance)
                     .forEach(npc -> npc.animation().queue(AnimationModifier.EntityAnimation.SWING_MAIN_ARM).send(player));
         }
     }

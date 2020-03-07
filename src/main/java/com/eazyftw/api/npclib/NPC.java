@@ -111,6 +111,10 @@ public class NPC {
         this.seeingPlayers.remove(player);
     }
 
+    protected void removeSeeingPlayer(Player player) {
+        this.seeingPlayers.remove(player);
+    }
+
     /**
      * @return a copy of all players seeing this NPC
      */
