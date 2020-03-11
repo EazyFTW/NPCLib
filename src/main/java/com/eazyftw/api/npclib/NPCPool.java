@@ -95,6 +95,7 @@ public class NPCPool implements Listener {
             for (Player player : ImmutableList.copyOf(Bukkit.getOnlinePlayers())) {
 
                 for (NPC npc : this.npcMap.values()) {
+                    if(npc.getLocation().getWorld() != player.getLocation().getWorld()) continue;
                     double distance = npc.getLocation().distance(player.getLocation());
 
                     if (distance >= this.spawnDistance && npc.isShownFor(player)) {
